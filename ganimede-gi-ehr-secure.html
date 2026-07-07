@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ganimede — GI EHR</title>
+<!-- Favicon: the logo's 'M' glyph, white on brand teal -->
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="6 10 166 206"><rect x="6" y="10" width="166" height="206" rx="34" fill="%230f6b5c"/><g fill="none" stroke="%23ffffff" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="9" d="M 25 170 C 25 161.33 25 137.17 25 118 C 25 98.83 24.17 69.33 25 55 C 25.83 40.67 26.17 36.83 30 32 C 33.83 27.17 41 22.67 48 26 C 55 29.33 65 39 72 52 C 79 65 84 104 90 104 C 96 104 101 65 108 52 C 115 39 125 29.33 132 26 C 139 22.67 146.17 27.17 150 32 C 153.83 36.83 154.17 40.67 155 55 C 155.83 69.33 155 98.83 155 118 C 155 137.17 155 161.33 155 170"/><path stroke-width="9" d="M 25 168 C 22 192 52 194 48 173 C 45 156 28 163 41 197"/><path stroke-width="8" d="M 154 172 C 153 184 145 190 137 192"/></g></svg>'>
+<style>
+/* ============================================================
+   DESIGN SYSTEM  (Part A)
+   Single-file prototype. No backend. All state in localStorage.
+   ============================================================ */
+:root{
+  --bg:#f4f6f9;
+  --surface:#ffffff;
+  --surface-2:#fafbfc;
+  --border:#e3e8ef;
+  --border-strong:#cfd6e0;
+  --text:#1a2433;
+  --text-2:#5a6672;
+  --text-3:#8a94a2;
+  /* ---- BRAND PALETTE (single source of truth) ----
+     Change these 3 values (or use the top-bar palette picker) and the whole
+     app re-skins. The picker in the top bar just overwrites these at runtime. */
+  --brand:#0f6b5c;      /* primary brand color */
+  --brand-2:#11856f;    /* hover / darker */
+  --brand-soft:#e6f2ef; /* tint for backgrounds & active nav */
+  --accent:#2563eb;
+  --accent-soft:#e8f0fe;
+  --warn:#b45309;
+  --warn-soft:#fef3e2;
+  --danger:#b91c1c;
+  --danger-soft:#fdeaea;
+  --ok:#15803d;
+  --ok-soft:#e7f4ec;
+  --radius:10px;
+  --radius-sm:7px;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.05);
+  --shadow-lg:0 8px 24px rgba(16,24,40,.10);
+  --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+a{color:inherit}
+
+/* ---------- App shell ---------- */
+.app{display:grid;grid-template-columns:236px 1fr;grid-template-rows:56px 1fr;height:100vh}
+.topbar{grid-column:1/3;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);z-index:5}
+
+/* LOGO SLOT — Ganimede wordmark as a bold teal badge (tracks the brand color). */
+#logo-slot{
+  flex:0 0 auto;display:flex;align-items:center;
+  background:var(--brand);border-radius:10px;padding:8px 15px;
+}
+#logo-slot svg{height:27px;width:auto;display:block}
+
+.topbar-search{flex:1;max-width:420px;position:relative}
+.topbar-search input{width:100%;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 12px 0 34px;font-size:13px;background:var(--surface-2);color:var(--text)}
+.topbar-search input:focus{outline:none;border-color:var(--brand);background:#fff}
+.topbar-search svg{position:absolute;left:11px;top:9px;color:var(--text-3)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.topbar-pill{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);background:var(--surface-2);border:1px solid var(--border);padding:5px 10px;border-radius:20px}
+/* Palette picker */
+.palette-wrap{position:relative}
+.palette-btn{display:flex;align-items:center;gap:7px;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:20px;background:var(--surface-2);color:var(--text-2)}
+.palette-btn:hover{background:#fff;border-color:var(--border-strong)}
+.swatch-dot{width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.1)}
+.palette-menu{position:absolute;top:42px;right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:10px;width:210px;display:none;z-index:20}
+.palette-menu.open{display:block}
+.palette-menu .pm-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);padding:2px 6px 8px}
+.palette-opt{display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;padding:8px 8px;border-radius:8px;text-align:left;font-size:13px;font-weight:500;color:var(--text)}
+.palette-opt:hover{background:var(--surface-2)}
+.palette-opt.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+.palette-opt .sw{width:16px;height:16px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.08)}
+.palette-opt .chk{margin-left:auto;color:var(--brand)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px}
+
+/* ---------- Sidebar ---------- */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column}
+.nav-group-label{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--text-3);text-transform:uppercase;padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:8px;color:var(--text-2);font-weight:500;font-size:13.5px;border:none;background:none;width:100%;text-align:left;position:relative}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+.nav-item .ico{width:18px;height:18px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.nav-item .count{margin-left:auto;font-size:11px;font-weight:700;background:var(--danger-soft);color:var(--danger);padding:1px 7px;border-radius:10px}
+.nav-item.soon{opacity:.55}
+.nav-item .soon-tag{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--text-3);border:1px solid var(--border);padding:1px 6px;border-radius:9px}
+.sidebar-foot{margin-top:auto;padding:12px 10px 4px;font-size:11px;color:var(--text-3);border-top:1px solid var(--border)}
+
+/* ---------- Main ---------- */
+.main{overflow-y:auto;padding:24px 28px 60px}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.page-sub{color:var(--text-2);font-size:13px;margin-top:3px}
+.btn{height:36px;padding:0 15px;border-radius:8px;border:1px solid var(--border-strong);background:#fff;color:var(--text);font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brand-2)}
+
+/* KPI cards */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow)}
+.kpi .label{font-size:12px;color:var(--text-2);font-weight:500;display:flex;align-items:center;gap:7px}
+.kpi .val{font-size:27px;font-weight:700;margin-top:8px;letter-spacing:-.02em}
+.kpi .meta{font-size:11.5px;margin-top:3px;color:var(--text-3)}
+.kpi .val.warn{color:var(--warn)}
+.kpi .val.danger{color:var(--danger)}
+.kpi .val.brand{color:var(--brand)}
+
+/* Panels / worklists */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border)}
+.panel-title{font-weight:700;font-size:14px;display:flex;align-items:center;gap:9px}
+.panel-title .badge{font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px}
+.badge.red{background:var(--danger-soft);color:var(--danger)}
+.badge.amber{background:var(--warn-soft);color:var(--warn)}
+.badge.blue{background:var(--accent-soft);color:var(--accent)}
+.badge.green{background:var(--ok-soft);color:var(--ok)}
+.panel-link{font-size:12px;color:var(--brand);font-weight:600;background:none;border:none}
+.panel-body{max-height:none}
+
+.row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.row:last-child{border-bottom:none}
+.row:hover{background:var(--surface-2)}
+.row .who{font-weight:600;font-size:13.5px}
+.row .sub{font-size:12px;color:var(--text-2);margin-top:1px}
+.row .rt{margin-left:auto;text-align:right;flex:0 0 auto}
+.row .rt .t{font-size:12px;color:var(--text-3)}
+.pill{font-size:11px;font-weight:700;padding:2px 9px;border-radius:11px;white-space:nowrap}
+.pill.red{background:var(--danger-soft);color:var(--danger)}
+.pill.amber{background:var(--warn-soft);color:var(--warn)}
+.pill.blue{background:var(--accent-soft);color:var(--accent)}
+.pill.green{background:var(--ok-soft);color:var(--ok)}
+.pill.gray{background:#eef1f5;color:var(--text-2)}
+.mini-av{width:30px;height:30px;border-radius:50%;background:#dbe4e1;color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:0 0 auto}
+
+/* Schedule */
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:3px}
+.seg button{border:none;background:none;padding:7px 14px;border-radius:7px;font-weight:600;font-size:13px;color:var(--text-2)}
+.seg button.active{background:#fff;color:var(--brand);box-shadow:var(--shadow)}
+.sched-wrap{display:grid;grid-template-columns:64px 1fr;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.sched-col-head{grid-column:1/3;display:grid;grid-template-columns:64px 1fr;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.sched-col-head .rh{padding:10px 12px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em}
+.time-col{border-right:1px solid var(--border)}
+.time-slot{height:70px;padding:6px 8px;font-size:11px;color:var(--text-3);text-align:right;border-bottom:1px solid var(--border)}
+.slot-col{position:relative}
+.slot-cell{height:70px;border-bottom:1px solid var(--border)}
+.appt{position:absolute;left:8px;right:8px;border-radius:8px;padding:7px 10px;font-size:12px;overflow:hidden;border-left:3px solid;box-shadow:var(--shadow);cursor:pointer}
+.appt:hover{filter:brightness(.98)}
+.appt .a-who{font-weight:700;font-size:12.5px}
+.appt .a-type{font-size:11px;opacity:.9;margin-top:1px}
+.appt.office{background:var(--accent-soft);border-color:var(--accent);color:#1e3a8a}
+.appt.newpt{background:var(--brand-soft);border-color:var(--brand);color:#0f5145}
+.appt.scope{background:#eef2f7;border-color:#475569;color:#1e293b}
+.appt.egd{background:var(--warn-soft);border-color:var(--warn);color:#7c4a10}
+.appt.block-open{background:repeating-linear-gradient(45deg,#f7f9fb,#f7f9fb 8px,#eef1f5 8px,#eef1f5 16px);border-color:var(--border-strong);color:var(--text-3)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:14px 2px 0;font-size:12px;color:var(--text-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+/* Placeholder pages for later parts */
+.soon-page{background:var(--surface);border:1px dashed var(--border-strong);border-radius:var(--radius);padding:48px;text-align:center;color:var(--text-2);margin-top:8px}
+.soon-page h3{font-size:17px;color:var(--text);margin-bottom:8px}
+.soon-page .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--brand);background:var(--brand-soft);padding:4px 11px;border-radius:20px;margin-bottom:16px;text-transform:uppercase}
+.soon-page ul{display:inline-block;text-align:left;margin-top:14px;color:var(--text-2);font-size:13px;line-height:1.9}
+
+.section-gap{height:22px}
+
+/* ---------- Patient chart (Part B) ---------- */
+.pt-header{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px}
+.pt-header .big-av{width:52px;height:52px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex:0 0 auto}
+.pt-header .name{font-size:19px;font-weight:700}
+.pt-header .demo{font-size:12.5px;color:var(--text-2);margin-top:2px}
+.pt-facts{margin-left:auto;display:flex;gap:26px;flex-wrap:wrap}
+.pt-fact{font-size:12px}
+.pt-fact .k{color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:10.5px}
+.pt-fact .v{font-weight:600;margin-top:2px}
+.pt-select{height:34px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-size:13px;font-weight:600;color:var(--text);background:var(--surface-2)}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.chart-grid.wide{grid-template-columns:1fr 1fr}
+.list-item{padding:9px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:9px;align-items:flex-start}
+.list-item:last-child{border-bottom:none}
+.list-item .lead{width:6px;height:6px;border-radius:50%;background:var(--brand);margin-top:7px;flex:0 0 auto}
+.list-item.allergy .lead{background:var(--danger)}
+.enc-item{padding:10px 16px;border-bottom:1px solid var(--border)}
+.enc-item:last-child{border-bottom:none}
+.enc-item .ed{font-size:11px;color:var(--text-3);font-weight:600}
+.enc-item .et{font-size:13px;font-weight:600;margin-top:1px}
+.enc-item .ew{font-size:12px;color:var(--text-2)}
+
+/* ---------- Office note (Part B) ---------- */
+.note-layout{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;align-items:start}
+.note-build{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.nb-section{border-bottom:1px solid var(--border);padding:14px 16px}
+.nb-section:last-child{border-bottom:none}
+.nb-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px}
+.nb-group{margin-bottom:12px}
+.nb-group:last-child{margin-bottom:0}
+.nb-glabel{font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:7px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;border:1px solid var(--border-strong);background:#fff;font-size:12.5px;font-weight:500;color:var(--text-2);margin:0 6px 6px 0}
+.chip:hover{border-color:var(--brand);color:var(--brand)}
+.chip.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:600}
+.chip.on::before{content:"✓";font-size:11px;font-weight:800}
+/* Live note preview */
+.note-preview{position:sticky;top:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.np-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.np-head .pt{font-weight:700;font-size:13px}
+.np-body{padding:16px 18px;font-size:13px;line-height:1.65;max-height:560px;overflow-y:auto}
+.np-body h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);margin:14px 0 4px;font-weight:700}
+.np-body h4:first-child{margin-top:0}
+.np-body p{color:var(--text);margin-bottom:2px}
+.np-body .ph{color:var(--text-3);font-style:italic}
+.speed-bar{display:flex;align-items:center;gap:14px;background:var(--brand-soft);border:1px solid var(--brand);border-radius:var(--radius);padding:11px 16px;margin-bottom:16px;flex-wrap:wrap}
+.speed-bar .sb-metric{font-size:13px;color:var(--brand);font-weight:600}
+.speed-bar .sb-metric b{font-size:16px}
+.speed-bar .vs{color:var(--text-3);font-size:12px;text-decoration:line-through}
+.speed-bar .sb-spacer{margin-left:auto}
+.tmpl-seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:3px}
+.tmpl-seg button{border:none;background:none;padding:6px 12px;border-radius:7px;font-weight:600;font-size:12.5px;color:var(--text-2)}
+.tmpl-seg button.active{background:#fff;color:var(--brand);box-shadow:var(--shadow)}
+
+/* ---------- Colonoscopy builder (Part C) ---------- */
+.stepper{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:9px;border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;color:var(--text-3)}
+.step .num{width:20px;height:20px;border-radius:50%;background:#eef1f5;color:var(--text-3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.step.active{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+.step.active .num{background:var(--brand);color:#fff}
+.step.done{color:var(--ok)}
+.step.done .num{background:var(--ok);color:#fff}
+.proc-layout{display:grid;grid-template-columns:1.02fr .98fr;gap:16px;align-items:start}
+.form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.field{flex:1;min-width:140px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:5px}
+.field select,.field input{width:100%;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-size:13px;font-weight:500;color:var(--text);background:var(--surface-2)}
+.field select:focus,.field input:focus{outline:none;border-color:var(--brand);background:#fff}
+.qseg{display:flex;gap:6px;flex-wrap:wrap}
+.qseg button{border:1px solid var(--border-strong);background:#fff;border-radius:7px;padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--text-2)}
+.qseg button.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand)}
+.qseg button.on.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.qseg button.on.bad{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+.polyp{border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;background:var(--surface-2)}
+.polyp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.polyp-head .pt{font-weight:700;font-size:13px}
+.polyp-head .rm{border:none;background:none;color:var(--danger);font-size:12px;font-weight:600}
+.add-polyp{width:100%;border:1px dashed var(--border-strong);background:var(--surface-2);border-radius:9px;padding:11px;font-weight:600;color:var(--brand);font-size:13px}
+.add-polyp:hover{background:var(--brand-soft)}
+/* Report preview */
+.report{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:0}
+.report-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.report-tabs button{flex:1;border:none;background:none;padding:11px;font-size:12.5px;font-weight:600;color:var(--text-2);border-bottom:2px solid transparent}
+.report-tabs button.active{color:var(--brand);border-bottom-color:var(--brand);background:#fff}
+.report-body{padding:16px 18px;font-size:13px;line-height:1.62;max-height:600px;overflow-y:auto}
+.report-body h4{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--brand);margin:13px 0 3px;font-weight:700}
+.report-body h4:first-child{margin-top:0}
+.report-body .mono{white-space:pre-wrap;font-size:12.5px}
+/* Magic moment / path */
+.path-card{border:1px solid var(--border);border-radius:9px;padding:13px 14px;margin-bottom:10px;background:var(--surface-2)}
+.path-card .pc-head{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.path-card .spec{font-weight:700;font-size:13px}
+.path-card select{height:32px;border:1px solid var(--border);border-radius:7px;padding:0 8px;font-size:12.5px;font-weight:600;background:#fff;width:100%}
+.magic-banner{background:linear-gradient(90deg,var(--brand-soft),#fff);border:1px solid var(--brand);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.magic-banner .ic{width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.magic-banner .mt{font-weight:700;font-size:14px;color:var(--brand)}
+.magic-banner .ms{font-size:12.5px;color:var(--text-2)}
+.surv-result{border:2px solid var(--brand);border-radius:var(--radius);overflow:hidden;margin-bottom:14px}
+.surv-hero{background:var(--brand);color:#fff;padding:18px 20px;display:flex;align-items:center;gap:18px}
+.surv-hero .big{font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.surv-hero .lbl{font-size:13px;opacity:.9}
+.surv-hero .lbl b{font-size:15px}
+.surv-detail{padding:14px 18px;font-size:13px;line-height:1.6}
+.surv-detail .cite{font-size:12px;color:var(--text-3);margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.recall-made{background:var(--ok-soft);border:1px solid var(--ok);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.recall-made .ic{width:32px;height:32px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+
+/* ---------- Recall dashboard (Part D) ---------- */
+.filter-seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:3px}
+.filter-seg button{border:none;background:none;padding:7px 13px;border-radius:7px;font-weight:600;font-size:12.5px;color:var(--text-2)}
+.filter-seg button.active{background:#fff;color:var(--brand);box-shadow:var(--shadow)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:700;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--surface-2)}
+.tbl .who{font-weight:600}
+.tbl .money{font-weight:700;font-variant-numeric:tabular-nums}
+.mini-btn{height:30px;padding:0 11px;border-radius:7px;border:1px solid var(--brand);background:var(--brand);color:#fff;font-weight:600;font-size:12px}
+.mini-btn.ghost{background:#fff;color:var(--brand)}
+
+/* ---------- Financial (Part D) ---------- */
+.bars{display:flex;align-items:flex-end;gap:12px;height:180px;padding:14px 16px 0}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end}
+.bar{width:100%;max-width:44px;background:var(--brand);border-radius:6px 6px 0 0;position:relative;transition:height .3s}
+.bar.alt{background:var(--brand-soft);border:1px solid var(--brand)}
+.bar-lbl{font-size:11px;color:var(--text-3);font-weight:600}
+.bar-val{font-size:11px;color:var(--text);font-weight:700}
+.hbars{padding:6px 16px 14px}
+.hbar-row{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:12.5px}
+.hbar-row .hl{width:92px;color:var(--text-2);font-weight:600}
+.hbar-track{flex:1;height:16px;background:var(--surface-2);border-radius:8px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:8px}
+.hbar-row .hv{width:64px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.donut-wrap{display:flex;align-items:center;gap:18px;padding:16px}
+.legend-list{font-size:12.5px}
+.legend-list div{display:flex;align-items:center;gap:8px;margin:6px 0}
+.legend-list i{width:11px;height:11px;border-radius:3px}
+
+/* ---------- Vision & roadmap (Part D) ---------- */
+.vision-sheet{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin-bottom:16px}
+.vision-sheet h2{font-size:18px;margin-bottom:4px}
+.vision-sheet .lede{color:var(--text-2);font-size:13.5px;margin-bottom:18px;max-width:70ch}
+.arch{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:6px}
+.arch-col{border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.arch-col h5{font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:var(--surface-2);padding:9px 12px;color:var(--brand);border-bottom:1px solid var(--border)}
+.arch-col ul{list-style:none;padding:8px 12px}
+.arch-col li{font-size:12.5px;padding:4px 0;color:var(--text)}
+.moat{background:var(--brand-soft);border:1px solid var(--brand);border-radius:9px;padding:12px 14px;margin-top:14px;font-size:13px;color:var(--text)}
+.roadmap{position:relative}
+.phase{display:grid;grid-template-columns:132px 1fr;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)}
+.phase:last-child{border-bottom:none}
+.phase .pn{font-weight:700;font-size:13.5px}
+.phase .pn .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:6px}
+.phase .pd{font-size:13px;color:var(--text-2);line-height:1.55}
+.tag.now{background:var(--ok-soft);color:var(--ok)}
+.tag.next{background:var(--warn-soft);color:var(--warn)}
+.tag.later{background:#eef1f5;color:var(--text-2)}
+.print-btn{float:right}
+@media print{.sidebar,.topbar,.print-btn{display:none}.app{display:block}.main{padding:0}}
+
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.chart-grid,.chart-grid.wide{grid-template-columns:1fr}.note-layout,.proc-layout{grid-template-columns:1fr}.arch{grid-template-columns:1fr 1fr}}
+
+/* ---------- Lock screen (password gate) ---------- */
+#lock{position:fixed;inset:0;z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(155deg,var(--brand),var(--brand-2));color:#fff;padding:24px;text-align:center}
+body.locked #lock{display:flex}
+body.locked .app{display:none}
+body.locked{overflow:hidden}
+#lock .lock-logo svg{height:88px;width:auto;display:block;margin-bottom:26px}
+#lock p{font-size:16px;font-weight:500;opacity:.95;margin-bottom:24px;letter-spacing:.01em}
+#lock .lock-form{display:flex;gap:9px;background:#fff;padding:8px;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.25)}
+#lock input{border:none;outline:none;height:46px;width:240px;padding:0 16px;font-size:15px;border-radius:9px;color:var(--text);background:#fff}
+#lock button{height:46px;padding:0 24px;border:none;border-radius:9px;background:var(--brand);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+#lock button:hover{background:var(--brand-2)}
+#lock .lock-err{min-height:22px;margin-top:16px;color:#ffdede;font-size:13.5px;font-weight:600;opacity:0;transition:opacity .18s}
+#lock .lock-err.show{opacity:1}
+#lock .lock-foot{position:absolute;bottom:22px;font-size:11px;opacity:.7;letter-spacing:.03em}
+</style>
+</head>
+<body class="locked">
+
+<!-- ===== LOCK SCREEN ===== -->
+<div id="lock">
+  <div class="lock-logo">
+    <svg viewBox="95 72 850 194" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ganimede">
+      <g font-family="'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="158" fill="#ffffff" letter-spacing="2">
+        <text x="458" y="212" text-anchor="end">gani</text>
+        <text x="602" y="212" text-anchor="start">ede</text>
+      </g>
+      <g transform="translate(447.00,62.00) scale(0.92)">
+        <path d="M 25.00 170.00 C 25.00 161.33 25.00 137.17 25.00 118.00 C 25.00 98.83 24.17 69.33 25.00 55.00 C 25.83 40.67 26.17 36.83 30.00 32.00 C 33.83 27.17 41.00 22.67 48.00 26.00 C 55.00 29.33 65.00 39.00 72.00 52.00 C 79.00 65.00 84.00 104.00 90.00 104.00 C 96.00 104.00 101.00 65.00 108.00 52.00 C 115.00 39.00 125.00 29.33 132.00 26.00 C 139.00 22.67 146.17 27.17 150.00 32.00 C 153.83 36.83 154.17 40.67 155.00 55.00 C 155.83 69.33 155.00 98.83 155.00 118.00 C 155.00 137.17 155.00 161.33 155.00 170.00" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 25 168 C 22 192, 52 194, 48 173 C 45 156, 28 163, 41 197" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 154 172 C 153 184, 145 190, 137 192" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+      </g>
+    </svg>
+  </div>
+  <p>Enter the password to see the site</p>
+  <form class="lock-form" onsubmit="return tryUnlock(event)">
+    <input id="lock-input" type="password" placeholder="Password" autocomplete="off" spellcheck="false" aria-label="Password">
+    <button type="submit">Unlock</button>
+  </form>
+  <div class="lock-err" id="lock-err">Incorrect password — try again.</div>
+  <div class="lock-foot">Ganimede · protected demo</div>
+</div>
+
+<div class="app">
+
+  <!-- ===== TOP BAR ===== -->
+  <header class="topbar">
+    <!-- ▼▼▼ LOGO SLOT — Ganimede wordmark ▼▼▼ -->
+    <div id="logo-slot">
+      <svg viewBox="95 72 850 194" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ganimede">
+        <g font-family="'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="158" fill="#ffffff" letter-spacing="2">
+          <text x="458" y="212" text-anchor="end">gani</text>
+          <text x="602" y="212" text-anchor="start">ede</text>
+        </g>
+        <g transform="translate(447.00,62.00) scale(0.92)">
+          <path d="M 25.00 170.00 C 25.00 161.33 25.00 137.17 25.00 118.00 C 25.00 98.83 24.17 69.33 25.00 55.00 C 25.83 40.67 26.17 36.83 30.00 32.00 C 33.83 27.17 41.00 22.67 48.00 26.00 C 55.00 29.33 65.00 39.00 72.00 52.00 C 79.00 65.00 84.00 104.00 90.00 104.00 C 96.00 104.00 101.00 65.00 108.00 52.00 C 115.00 39.00 125.00 29.33 132.00 26.00 C 139.00 22.67 146.17 27.17 150.00 32.00 C 153.83 36.83 154.17 40.67 155.00 55.00 C 155.83 69.33 155.00 98.83 155.00 118.00 C 155.00 137.17 155.00 161.33 155.00 170.00" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 25 168 C 22 192, 52 194, 48 173 C 45 156, 28 163, 41 197" fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 154 172 C 153 184, 145 190, 137 192" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
+    <!-- ▲▲▲ swap the inner <svg> to update the logo ▲▲▲ -->
+
+    <div class="topbar-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input placeholder="Search patients, MRN, phone…">
+    </div>
+    <div class="topbar-right">
+      <div class="palette-wrap">
+        <button class="palette-btn" id="palette-btn" onclick="togglePalette(event)" title="Change brand palette">
+          <span class="swatch-dot" id="active-swatch"></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 2-2 2 2 0 0 1 2-2 3 3 0 0 0 3-3 9 9 0 0 0-9-9Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/></svg>
+        </button>
+        <div class="palette-menu" id="palette-menu"></div>
+      </div>
+      <div class="topbar-pill"><span class="dot"></span> Demo data</div>
+      <div class="avatar" id="user-initials">SR</div>
+    </div>
+  </header>
+
+  <!-- ===== SIDEBAR ===== -->
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main" id="main"></main>
+</div>
+
+<script>
+/* ============================================================
+   SEED DATA  (Part A)  — written once to localStorage.
+   Structured so Parts B/C/D read from the same store.
+   Bump SEED_VERSION to force a reseed after editing.
+   ============================================================ */
+const SEED_VERSION = "b-1";
+const KEY = "gi_ehr_store";
+
+function seed(){
+  const store = {
+    version: SEED_VERSION,
+    provider: { name:"Dr. Sarah Reyes", initials:"SR", role:"Gastroenterology" },
+    patients: [
+      {id:"p1", name:"Robert Delgado", dob:"1958-03-12", age:68, sex:"M", mrn:"GI-10432", ins:"Medicare + AARP", pcp:"Dr. Nguyen"},
+      {id:"p2", name:"Marion Whitfield", dob:"1965-07-30", age:60, sex:"F", mrn:"GI-10388", ins:"BCBS PPO", pcp:"Dr. Alvarez"},
+      {id:"p3", name:"James Okafor", dob:"1971-11-02", age:54, sex:"M", mrn:"GI-10501", ins:"UnitedHealthcare", pcp:"Dr. Patel"},
+      {id:"p4", name:"Linda Castellano", dob:"1949-01-19", age:77, sex:"F", mrn:"GI-10120", ins:"Medicare", pcp:"Dr. Nguyen"},
+      {id:"p5", name:"Kevin Brooks", dob:"1983-06-24", age:42, sex:"M", mrn:"GI-10677", ins:"Aetna HMO", pcp:"Dr. Lee"},
+      {id:"p6", name:"Priya Raman", dob:"1990-09-15", age:35, sex:"F", mrn:"GI-10712", ins:"Cigna PPO", pcp:"Dr. Alvarez"},
+      {id:"p7", name:"Walter Simmons", dob:"1954-04-08", age:72, sex:"M", mrn:"GI-10245", ins:"Medicare + BCBS", pcp:"Dr. Patel"},
+      {id:"p8", name:"Denise Faulkner", dob:"1968-12-01", age:57, sex:"F", mrn:"GI-10559", ins:"Humana", pcp:"Dr. Lee"}
+    ],
+    // Per-patient chart detail (read-mostly for the demo)
+    charts: {
+      p1:{
+        problems:["Screen-detected colon adenomas (personal hx)","GERD, on PPI","Hypertension","Type 2 diabetes mellitus"],
+        meds:["Omeprazole 40 mg PO daily","Lisinopril 20 mg PO daily","Metformin 1000 mg PO BID","Aspirin 81 mg PO daily"],
+        allergies:["Penicillin — rash","Shellfish — hives"],
+        encounters:[
+          {d:"2026-07-07", t:"Results review — pathology", who:"Dr. Reyes"},
+          {d:"2026-06-18", t:"Colonoscopy (surveillance)", who:"Dr. Reyes"},
+          {d:"2023-06-02", t:"Colonoscopy (2 adenomas removed)", who:"Dr. Reyes"}
+        ]
+      },
+      p2:{
+        problems:["Hematochezia (rectal bleeding) — new","Diverticulosis","Iron deficiency anemia","Prior positive FIT"],
+        meds:["Ferrous sulfate 325 mg PO daily","Atorvastatin 20 mg PO daily"],
+        allergies:["No known drug allergies"],
+        encounters:[
+          {d:"2026-07-07", t:"New patient — rectal bleeding", who:"Dr. Reyes"},
+          {d:"2026-06-20", t:"CT abd/pelvis — diverticulosis", who:"Radiology"}
+        ]
+      },
+      p3:{
+        problems:["GERD","Barrett's esophagus — none to date (surveillance)","Obesity (BMI 31)","Positive FIT — workup pending"],
+        meds:["Pantoprazole 40 mg PO daily","Sertraline 50 mg PO daily"],
+        allergies:["Sulfa drugs — rash"],
+        encounters:[
+          {d:"2026-07-07", t:"Follow-up — GERD", who:"Dr. Reyes"},
+          {d:"2026-03-11", t:"EGD (LA Grade B esophagitis)", who:"Dr. Reyes"}
+        ]
+      },
+      p4:{
+        problems:["Post-polypectomy surveillance (3-yr, overdue)","Crohn's disease — quiescent","Osteopenia"],
+        meds:["Azathioprine 100 mg PO daily","Calcium/Vit D PO daily"],
+        allergies:["No known drug allergies"],
+        encounters:[
+          {d:"2026-07-07", t:"IBD follow-up", who:"Dr. Reyes"},
+          {d:"2023-01-14", t:"Colonoscopy (tubulovillous adenoma)", who:"Dr. Reyes"}
+        ]
+      },
+      p8:{
+        problems:["Barrett's esophagus (non-dysplastic)","GERD","Hyperlipidemia"],
+        meds:["Esomeprazole 40 mg PO daily","Rosuvastatin 10 mg PO daily"],
+        allergies:["Codeine — nausea"],
+        encounters:[
+          {d:"2026-07-07", t:"Barrett's follow-up", who:"Dr. Reyes"},
+          {d:"2023-05-22", t:"EGD (Barrett's, no dysplasia)", who:"Dr. Reyes"}
+        ]
+      }
+    },
+    // Inbox worklists
+    results: [
+      {pid:"p1", label:"Colon biopsy — pathology resulted", detail:"2 tubular adenomas, sigmoid & descending", pill:"Path", cls:"amber", when:"25 min ago", flag:"Reconcile"},
+      {pid:"p3", label:"CBC + CMP", detail:"Hgb 11.2 (L), otherwise WNL", pill:"Lab", cls:"blue", when:"1 hr ago", flag:"Review"},
+      {pid:"p6", label:"H. pylori stool antigen", detail:"Positive", pill:"Lab", cls:"blue", when:"2 hr ago", flag:"Review"},
+      {pid:"p2", label:"CT abdomen/pelvis w/ contrast", detail:"No acute findings; diverticulosis", pill:"Imaging", cls:"blue", when:"Yesterday", flag:"Review"}
+    ],
+    pathPending: [
+      {pid:"p7", label:"EGD biopsy — gastric antrum", detail:"Sent to PathGroup · specimen ×2", when:"2 days out", cls:"gray"},
+      {pid:"p4", label:"Colon biopsy — cecal polyp", detail:"Sent to PathGroup · specimen ×1", when:"1 day out", cls:"gray"},
+      {pid:"p5", label:"Colon biopsy — rectal", detail:"Sent to PathGroup · specimen ×1", when:"Due today", cls:"amber"}
+    ],
+    recallsDue: [
+      {pid:"p4", reason:"Post-polypectomy surveillance", interval:"3-yr", due:"Overdue 22 days", cls:"red", est:"$3,100"},
+      {pid:"p8", reason:"Barrett's surveillance EGD", interval:"3-yr", due:"Due this month", cls:"amber", est:"$2,400"},
+      {pid:"p7", reason:"Screening colonoscopy", interval:"10-yr", due:"Due this month", cls:"amber", est:"$3,100"},
+      {pid:"p2", reason:"FIT follow-up (positive)", interval:"—", due:"Due in 9 days", cls:"blue", est:"$3,100"}
+    ],
+    messages: [
+      {pid:"p5", label:"Patient message — prep question", detail:"“Can I take my blood pressure meds the morning of?”", when:"18 min ago", cls:"blue"},
+      {pid:"p1", label:"Refill request — omeprazole 40mg", detail:"Pharmacy: CVS #4021", when:"40 min ago", cls:"gray"}
+    ],
+    // Schedule
+    scheduleOffice: [
+      {start:8.0, len:0.5, pid:"p6", type:"New patient — dyspepsia", cls:"newpt"},
+      {start:8.5, len:0.5, pid:"p3", type:"Follow-up — GERD", cls:"office"},
+      {start:9.0, len:0.5, pid:"p1", type:"Results review — path", cls:"office"},
+      {start:9.5, len:0.5, name:"— open —", type:"Available", cls:"block-open"},
+      {start:10.0, len:0.5, pid:"p8", type:"Barrett's follow-up", cls:"office"},
+      {start:10.5, len:0.5, pid:"p2", type:"Rectal bleeding — new", cls:"newpt"},
+      {start:11.0, len:0.5, pid:"p5", type:"Abd pain — follow-up", cls:"office"},
+      {start:13.0, len:0.5, pid:"p7", type:"Pre-procedure consult", cls:"office"},
+      {start:13.5, len:0.5, name:"— open —", type:"Available", cls:"block-open"},
+      {start:14.0, len:0.5, pid:"p4", type:"IBD follow-up", cls:"office"}
+    ],
+    scheduleProc: [
+      {start:7.0, len:0.75, pid:"p4", type:"Colonoscopy — surveillance", cls:"scope"},
+      {start:7.75, len:0.75, pid:"p7", type:"Colonoscopy — screening", cls:"scope"},
+      {start:8.5, len:0.5, pid:"p6", type:"EGD — dyspepsia", cls:"egd"},
+      {start:9.0, len:0.75, pid:"p1", type:"Colonoscopy — surveillance", cls:"scope"},
+      {start:9.75, len:0.5, pid:"p8", type:"EGD — Barrett's surveil.", cls:"egd"},
+      {start:10.25, len:0.75, name:"— open —", type:"Open block", cls:"block-open"},
+      {start:11.0, len:0.75, pid:"p3", type:"Colonoscopy — FIT+ w/u", cls:"scope"},
+      {start:12.5, len:0.5, pid:"p5", type:"EGD — reflux", cls:"egd"},
+      {start:13.0, len:0.75, pid:"p2", type:"Colonoscopy — bleeding w/u", cls:"scope"}
+    ]
+  };
+  localStorage.setItem(KEY, JSON.stringify(store));
+  return store;
+}
+function getStore(){
+  let s = null;
+  try{ s = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(!s || s.version !== SEED_VERSION) s = seed();
+  return s;
+}
+const DB = getStore();
+const pt = id => DB.patients.find(p=>p.id===id) || {name:"—",mrn:"—",age:"",sex:""};
+const inits = n => n.split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase();
+
+/* ============================================================
+   THEME / PALETTE  — one place to change the whole app's brand.
+   Add or edit entries here; the top-bar picker lists them.
+   ============================================================ */
+const THEMES = [
+  {id:"teal",   name:"GI Teal",   brand:"#0f6b5c", brand2:"#11856f", soft:"#e6f2ef"},
+  {id:"blue",   name:"Clinical Blue", brand:"#1d5fd6", brand2:"#1a53bd", soft:"#e8f0fe"},
+  {id:"indigo", name:"Indigo",    brand:"#4f46e5", brand2:"#4338ca", soft:"#eceafd"},
+  {id:"emerald",name:"Emerald",   brand:"#0d9268", brand2:"#0b7d59", soft:"#e4f5ee"},
+  {id:"slate",  name:"Graphite",  brand:"#334155", brand2:"#1e293b", soft:"#eef1f5"},
+  {id:"plum",   name:"Plum",      brand:"#8b2f74", brand2:"#772863", soft:"#f6e9f2"}
+];
+const THEME_KEY = "gi_ehr_theme";
+function applyTheme(id){
+  const t = THEMES.find(x=>x.id===id) || THEMES[0];
+  const r = document.documentElement.style;
+  r.setProperty("--brand", t.brand);
+  r.setProperty("--brand-2", t.brand2);
+  r.setProperty("--brand-soft", t.soft);
+  localStorage.setItem(THEME_KEY, t.id);
+  const dot = document.getElementById("active-swatch");
+  if(dot) dot.style.background = t.brand;
+  renderPaletteMenu(t.id);
+}
+function renderPaletteMenu(activeId){
+  const menu = document.getElementById("palette-menu");
+  if(!menu) return;
+  menu.innerHTML = `<div class="pm-title">Brand palette</div>` + THEMES.map(t=>`
+    <button class="palette-opt ${t.id===activeId?'active':''}" onclick="applyTheme('${t.id}');togglePalette()">
+      <span class="sw" style="background:${t.brand}"></span>${t.name}
+      ${t.id===activeId?'<span class="chk">✓</span>':''}
+    </button>`).join("");
+}
+function togglePalette(e){
+  if(e) e.stopPropagation();
+  document.getElementById("palette-menu").classList.toggle("open");
+}
+document.addEventListener("click",()=>document.getElementById("palette-menu")?.classList.remove("open"));
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+const NAV = [
+  {group:"Clinical"},
+  {id:"dashboard", label:"Dashboard", icon:home, ready:true},
+  {id:"schedule",  label:"Schedule",  icon:cal,  ready:true},
+  {id:"chart",     label:"Patient Chart", icon:user, ready:true},
+  {id:"note",      label:"Office Note",   icon:doc,  ready:true},
+  {group:"GI"},
+  {id:"procedure", label:"Colonoscopy Builder", icon:scope, ready:true},
+  {id:"recalls",   label:"Recall & Surveillance", icon:bell, ready:true},
+  {group:"Business"},
+  {id:"financials",label:"Financial & Ops", icon:chart, ready:true},
+  {group:"Pitch"},
+  {id:"vision",    label:"Vision & Roadmap", icon:map, ready:true}
+];
+
+function icon(svg){return `<span class="ico">${svg}</span>`}
+function home(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>`}
+function cal(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>`}
+function user(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>`}
+function doc(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4M9 12h6M9 16h6"/></svg>`}
+function scope(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="3"/><path d="M8 16 20 4M17 4h3v3"/></svg>`}
+function bell(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>`}
+function chart(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-7"/></svg>`}
+function map(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>`}
+
+let CURRENT = "dashboard";
+function renderNav(){
+  const sb = document.getElementById("sidebar");
+  let html = "";
+  NAV.forEach(n=>{
+    if(n.group){ html += `<div class="nav-group-label">${n.group}</div>`; return; }
+    const active = n.id===CURRENT ? "active":"";
+    const soon = n.ready ? "" : "soon";
+    let right = "";
+    if(n.id==="dashboard") right = `<span class="count">6</span>`;
+    else if(!n.ready) right = `<span class="soon-tag">${n.part}</span>`;
+    html += `<button class="nav-item ${active} ${soon}" onclick="go('${n.id}')">
+      ${icon(n.icon())}<span>${n.label}</span>${right}</button>`;
+  });
+  html += `<div class="sidebar-foot">Phase 1 · Part A prototype<br>Dashboard + Schedule live</div>`;
+  sb.innerHTML = html;
+  document.getElementById("user-initials").textContent = DB.provider.initials;
+}
+function go(id){ CURRENT=id; renderNav(); render(); document.getElementById("main").scrollTop=0; }
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  const m = document.getElementById("main");
+  if(CURRENT==="dashboard") m.innerHTML = viewDashboard();
+  else if(CURRENT==="schedule") m.innerHTML = viewSchedule();
+  else if(CURRENT==="chart") m.innerHTML = viewChart();
+  else if(CURRENT==="note") m.innerHTML = viewNote();
+  else if(CURRENT==="procedure") m.innerHTML = viewProcedure();
+  else if(CURRENT==="recalls") m.innerHTML = viewRecalls();
+  else if(CURRENT==="financials") m.innerHTML = viewFinancials();
+  else if(CURRENT==="vision") m.innerHTML = viewVision();
+  else m.innerHTML = viewSoon(CURRENT);
+  if(CURRENT==="note") mountNote();
+}
+
+/* Selected patient (shared by chart + note). Default to a rich chart. */
+let SELECTED_PID = "p1";
+function openChart(pid){ SELECTED_PID = pid; go('chart'); }
+
+/* ---------- DASHBOARD / INBOX ---------- */
+function viewDashboard(){
+  const today = new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+  const recallRev = DB.recallsDue.reduce((s,r)=>s+Number(r.est.replace(/[^0-9]/g,"")),0);
+
+  const resultRows = DB.results.map(r=>{
+    const p = pt(r.pid);
+    return `<div class="row" onclick="openChart('${r.pid}')">
+      <div class="mini-av">${inits(p.name)}</div>
+      <div><div class="who">${p.name}</div><div class="sub">${r.label} · ${r.detail}</div></div>
+      <div class="rt"><span class="pill ${r.cls}">${r.flag}</span><div class="t">${r.when}</div></div>
+    </div>`;
+  }).join("");
+
+  const pathRows = DB.pathPending.map(r=>{
+    const p = pt(r.pid);
+    return `<div class="row" onclick="openChart('${r.pid}')">
+      <div class="mini-av">${inits(p.name)}</div>
+      <div><div class="who">${p.name}</div><div class="sub">${r.label} · ${r.detail}</div></div>
+      <div class="rt"><span class="pill ${r.cls}">${r.when}</span></div>
+    </div>`;
+  }).join("");
+
+  const recallRows = DB.recallsDue.map(r=>{
+    const p = pt(r.pid);
+    return `<div class="row" onclick="openChart('${r.pid}')">
+      <div class="mini-av">${inits(p.name)}</div>
+      <div><div class="who">${p.name} <span style="color:var(--text-3);font-weight:500">· ${r.interval}</span></div><div class="sub">${r.reason} · est ${r.est}</div></div>
+      <div class="rt"><span class="pill ${r.cls}">${r.due}</span></div>
+    </div>`;
+  }).join("");
+
+  const msgRows = DB.messages.map(r=>{
+    const p = pt(r.pid);
+    return `<div class="row">
+      <div class="mini-av">${inits(p.name)}</div>
+      <div><div class="who">${p.name}</div><div class="sub">${r.label} · ${r.detail}</div></div>
+      <div class="rt"><div class="t">${r.when}</div></div>
+    </div>`;
+  }).join("");
+
+  return `
+  <div class="page-head">
+    <div>
+      <div class="page-title">Good morning, ${DB.provider.name.split(" ").slice(-1)}</div>
+      <div class="page-sub">${today} · here's what needs you today</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn" onclick="go('schedule')">${cal()} Today's schedule</button>
+      <button class="btn primary">${doc()} New note</button>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="label">Results to review</div><div class="val brand">${DB.results.length}</div><div class="meta">1 pathology needs reconciliation</div></div>
+    <div class="kpi"><div class="label">Pathology pending</div><div class="val">${DB.pathPending.length}</div><div class="meta">1 due back today</div></div>
+    <div class="kpi"><div class="label">Recalls due / overdue</div><div class="val warn">${DB.recallsDue.length}</div><div class="meta">1 overdue</div></div>
+    <div class="kpi"><div class="label">Recall revenue at risk</div><div class="val danger">$${recallRev.toLocaleString()}</div><div class="meta">If not scheduled</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Results to review <span class="badge amber">${DB.results.length}</span></div><button class="panel-link">View all</button></div>
+      <div class="panel-body">${resultRows}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Pathology pending <span class="badge blue">${DB.pathPending.length}</span></div><button class="panel-link">View all</button></div>
+      <div class="panel-body">${pathRows}</div>
+    </div>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Recalls due <span class="badge red">${DB.recallsDue.length}</span></div><button class="panel-link" onclick="go('recalls')">Recall dashboard →</button></div>
+      <div class="panel-body">${recallRows}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Messages & refills <span class="badge blue">${DB.messages.length}</span></div><button class="panel-link">View all</button></div>
+      <div class="panel-body">${msgRows}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- SCHEDULE ---------- */
+let SCHED_VIEW = "office";
+function setSched(v){ SCHED_VIEW=v; render(); }
+
+function viewSchedule(){
+  const isOffice = SCHED_VIEW==="office";
+  const data = isOffice ? DB.scheduleOffice : DB.scheduleProc;
+  const startHr = 7, endHr = 15;           // 7a–3p grid
+  const pxPerHr = 70;
+  const hours = [];
+  for(let h=startHr; h<endHr; h++) hours.push(h);
+
+  const timeCol = hours.map(h=>{
+    const label = (h===12)?"12 pm":(h<12?`${h} am`:`${h-12} pm`);
+    return `<div class="time-slot">${label}</div>`;
+  }).join("");
+  const cells = hours.map(()=>`<div class="slot-cell"></div>`).join("");
+
+  const appts = data.map(a=>{
+    const top = (a.start-startHr)*pxPerHr;
+    const height = a.len*pxPerHr - 4;
+    const p = a.pid ? pt(a.pid) : {name:a.name||"—"};
+    const t = fmtTime(a.start);
+    return `<div class="appt ${a.cls}" style="top:${top+2}px;height:${height}px">
+      <div class="a-who">${t} · ${p.name}</div>
+      <div class="a-type">${a.type}${a.pid?` · ${p.mrn}`:""}</div>
+    </div>`;
+  }).join("");
+
+  const officeCount = DB.scheduleOffice.filter(a=>a.pid).length;
+  const procCount = DB.scheduleProc.filter(a=>a.pid).length;
+  const openBlocks = data.filter(a=>!a.pid).length;
+
+  return `
+  <div class="page-head">
+    <div>
+      <div class="page-title">Schedule</div>
+      <div class="page-sub">Tuesday, July 7 · ${DB.provider.name}</div>
+    </div>
+    <div class="seg">
+      <button class="${isOffice?'active':''}" onclick="setSched('office')">Office day</button>
+      <button class="${!isOffice?'active':''}" onclick="setSched('proc')">Procedure block</button>
+    </div>
+  </div>
+
+  <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi"><div class="label">${isOffice?'Office visits':'Procedures'} booked</div><div class="val brand">${isOffice?officeCount:procCount}</div><div class="meta">${isOffice?'2 new patients':'6 colonoscopy · 3 EGD'}</div></div>
+    <div class="kpi"><div class="label">Open slots</div><div class="val ${openBlocks?'warn':''}">${openBlocks}</div><div class="meta">${isOffice?'Fill from recall list':'ASC capacity available'}</div></div>
+    <div class="kpi"><div class="label">${isOffice?'Suite (other tab)':'Est. facility charges'}</div><div class="val">${isOffice?procCount+' proc':'$18.6k'}</div><div class="meta">${isOffice?'on procedure block':'faux · closes owner pitch'}</div></div>
+  </div>
+
+  <div class="sched-wrap">
+    <div class="sched-col-head">
+      <div class="rh">Time</div>
+      <div class="rh">${isOffice?'Clinic — Dr. Reyes':'Endoscopy Suite — Room 2'}</div>
+    </div>
+    <div class="time-col">${timeCol}</div>
+    <div class="slot-col">${cells}${appts}</div>
+  </div>
+
+  <div class="legend">
+    ${isOffice
+      ? `<span><i style="background:var(--accent)"></i> Follow-up</span><span><i style="background:var(--brand)"></i> New patient</span><span><i style="background:var(--border-strong)"></i> Open slot</span>`
+      : `<span><i style="background:#475569"></i> Colonoscopy</span><span><i style="background:var(--warn)"></i> EGD</span><span><i style="background:var(--border-strong)"></i> Open block</span>`}
+  </div>`;
+}
+function fmtTime(h){
+  const hr = Math.floor(h); const min = Math.round((h-hr)*60);
+  const ap = hr<12?"a":"p"; const hh = hr>12?hr-12:hr;
+  return `${hh}:${min.toString().padStart(2,"0")}${ap}`;
+}
+
+/* ---------- PATIENT CHART SUMMARY ---------- */
+function viewChart(){
+  const p = pt(SELECTED_PID);
+  const c = (DB.charts && DB.charts[SELECTED_PID]) || {problems:[],meds:[],allergies:["No known drug allergies"],encounters:[]};
+  const options = DB.patients.map(x=>`<option value="${x.id}" ${x.id===SELECTED_PID?'selected':''}>${x.name} · ${x.mrn}</option>`).join("");
+  const li = (arr,cls="")=> (arr.length?arr:["None recorded"]).map(t=>`<div class="list-item ${cls}"><span class="lead"></span><span>${t}</span></div>`).join("");
+  const enc = c.encounters.map(e=>`<div class="enc-item"><div class="ed">${e.d}</div><div class="et">${e.t}</div><div class="ew">${e.who}</div></div>`).join("") || `<div class="list-item">No encounters</div>`;
+
+  return `
+  <div class="page-head">
+    <div><div class="page-title">Patient Chart</div><div class="page-sub">Read-only summary from seeded data</div></div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <select class="pt-select" onchange="SELECTED_PID=this.value;render()">${options}</select>
+      <button class="btn primary" onclick="go('note')">${doc()} Start office note</button>
+    </div>
+  </div>
+
+  <div class="pt-header">
+    <div class="big-av">${inits(p.name)}</div>
+    <div>
+      <div class="name">${p.name}</div>
+      <div class="demo">${p.age} yo ${p.sex==='M'?'male':'female'} · DOB ${p.dob} · MRN ${p.mrn}</div>
+    </div>
+    <div class="pt-facts">
+      <div class="pt-fact"><div class="k">Insurance</div><div class="v">${p.ins}</div></div>
+      <div class="pt-fact"><div class="k">PCP</div><div class="v">${p.pcp}</div></div>
+      <div class="pt-fact"><div class="k">Allergies</div><div class="v" style="color:${c.allergies[0]==='No known drug allergies'?'var(--text)':'var(--danger)'}">${c.allergies.length} on file</div></div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Problem list <span class="badge blue">${c.problems.length}</span></div></div>
+      <div class="panel-body">${li(c.problems)}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Medications <span class="badge green">${c.meds.length}</span></div></div>
+      <div class="panel-body">${li(c.meds)}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Allergies <span class="badge red">${c.allergies.length}</span></div></div>
+      <div class="panel-body">${li(c.allergies,"allergy")}</div>
+    </div>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <div class="panel">
+    <div class="panel-head"><div class="panel-title">Recent encounters & procedures</div></div>
+    <div class="panel-body" style="display:grid;grid-template-columns:1fr 1fr 1fr">${enc}</div>
+  </div>`;
+}
+
+/* ============================================================
+   OFFICE NOTE ENGINE  — quick-pick chips assemble a live note.
+   Each template = sections → groups → options with narrative text.
+   ============================================================ */
+const NOTE_TEMPLATES = {
+  gerd:{
+    label:"GERD follow-up", cc:"Follow-up of gastroesophageal reflux disease.",
+    sections:[
+      {t:"HPI", groups:[
+        {id:"sx", l:"Current symptoms", multi:true, opts:[
+          {k:"heartburn", x:"heartburn"},{k:"regurg", x:"acid regurgitation"},
+          {k:"dysphagia", x:"dysphagia to solids"},{k:"cough", x:"nocturnal cough"},{k:"chest", x:"non-cardiac chest discomfort"}]},
+        {id:"course", l:"Since last visit", multi:false, opts:[
+          {k:"improved", x:"symptoms are improved on current therapy"},
+          {k:"stable", x:"symptoms are stable"},{k:"worse", x:"symptoms have worsened"}]},
+        {id:"adh", l:"PPI adherence", multi:false, opts:[
+          {k:"adherent", x:"reports good adherence to daily PPI"},{k:"prn", x:"taking PPI only as needed"},{k:"missed", x:"frequently misses doses"}]},
+        {id:"alarm", l:"Alarm features", multi:true, opts:[
+          {k:"none", x:"denies weight loss, GI bleeding, or vomiting"},
+          {k:"wl", x:"reports unintentional weight loss"},{k:"melena", x:"reports melena"}]}
+      ]},
+      {t:"ROS", groups:[
+        {id:"ros", l:"Review of systems", multi:true, opts:[
+          {k:"gineg", x:"GI otherwise negative"},{k:"constneg", x:"denies constitutional symptoms"},{k:"cvneg", x:"denies chest pain or dyspnea"}]}
+      ]},
+      {t:"Exam", groups:[
+        {id:"exam", l:"Focused exam", multi:true, opts:[
+          {k:"nad", x:"well-appearing, in no distress"},{k:"abdsoft", x:"abdomen soft, non-tender, non-distended"},{k:"nomass", x:"no palpable masses or organomegaly"}]}
+      ]},
+      {t:"Assessment & Plan", groups:[
+        {id:"plan", l:"Plan", multi:true, opts:[
+          {k:"continue", x:"Continue current PPI at present dose."},
+          {k:"stepup", x:"Step up to twice-daily PPI for 8 weeks."},
+          {k:"egd", x:"Schedule EGD to evaluate refractory symptoms."},
+          {k:"lifestyle", x:"Reinforce lifestyle measures: weight loss, head-of-bed elevation, avoiding late meals."},
+          {k:"fu", x:"Follow up in 3 months or sooner if symptoms escalate."}]}
+      ]}
+    ]
+  },
+  bleed:{
+    label:"Rectal bleeding (new)", cc:"New patient evaluation of hematochezia.",
+    sections:[
+      {t:"HPI", groups:[
+        {id:"dur", l:"Duration", multi:false, opts:[
+          {k:"days", x:"bleeding for several days"},{k:"weeks", x:"intermittent bleeding over several weeks"},{k:"months", x:"recurrent bleeding over several months"}]},
+        {id:"char", l:"Character", multi:true, opts:[
+          {k:"brbpr", x:"bright red blood per rectum"},{k:"onstool", x:"blood coating the stool"},{k:"onpaper", x:"blood on the toilet paper"},{k:"clots", x:"passage of clots"}]},
+        {id:"assoc", l:"Associated symptoms", multi:true, opts:[
+          {k:"painless", x:"bleeding is painless"},{k:"pain", x:"associated with anal pain/straining"},
+          {k:"bowelchg", x:"associated change in bowel habits"},{k:"noalarm", x:"denies weight loss or fever"}]},
+        {id:"risk", l:"Risk factors", multi:true, opts:[
+          {k:"famhx", x:"family history of colorectal cancer"},{k:"priorfit", x:"prior positive FIT"},{k:"anemia", x:"known iron deficiency anemia"}]}
+      ]},
+      {t:"ROS", groups:[
+        {id:"ros", l:"Review of systems", multi:true, opts:[
+          {k:"constneg", x:"denies fevers, chills, or weight loss"},{k:"fatigue", x:"reports fatigue"}]}
+      ]},
+      {t:"Exam", groups:[
+        {id:"exam", l:"Focused exam", multi:true, opts:[
+          {k:"nad", x:"well-appearing, hemodynamically stable"},{k:"abdsoft", x:"abdomen soft, non-tender"},
+          {k:"dre", x:"digital rectal exam without mass; external hemorrhoids noted"}]}
+      ]},
+      {t:"Assessment & Plan", groups:[
+        {id:"plan", l:"Plan", multi:true, opts:[
+          {k:"colo", x:"Schedule colonoscopy for evaluation of hematochezia."},
+          {k:"cbc", x:"Order CBC and iron studies."},
+          {k:"iron", x:"Continue oral iron supplementation."},
+          {k:"return", x:"Return precautions given for heavy bleeding, lightheadedness, or syncope."},
+          {k:"fu", x:"Follow up after colonoscopy to review findings."}]}
+      ]}
+    ]
+  }
+};
+
+let NOTE = { tmpl:"gerd", pid:"p3", sel:{}, clicks:0 };
+function noteReset(keepTmpl){ NOTE.sel={}; NOTE.clicks=0; }
+function setTmpl(t){ NOTE.tmpl=t; NOTE.pid = t==="gerd"?"p3":"p2"; noteReset(true); render(); }
+function toggleChip(gid, k, multi){
+  NOTE.clicks++;
+  if(multi){
+    NOTE.sel[gid] = NOTE.sel[gid] || [];
+    const i = NOTE.sel[gid].indexOf(k);
+    if(i>=0) NOTE.sel[gid].splice(i,1); else NOTE.sel[gid].push(k);
+  }else{
+    NOTE.sel[gid] = (NOTE.sel[gid] && NOTE.sel[gid][0]===k) ? [] : [k];
+  }
+  paintNote();
+}
+function isOn(gid,k){ return NOTE.sel[gid] && NOTE.sel[gid].indexOf(k)>=0; }
+
+function viewNote(){
+  const tpl = NOTE_TEMPLATES[NOTE.tmpl];
+  const p = pt(NOTE.pid);
+  const builder = tpl.sections.map(sec=>`
+    <div class="nb-section">
+      <div class="nb-title">${sec.t}</div>
+      ${sec.groups.map(g=>`
+        <div class="nb-group">
+          <div class="nb-glabel">${g.l}${g.multi?'':' <span style="color:var(--text-3);font-weight:400">(pick one)</span>'}</div>
+          <div>${g.opts.map(o=>`<button class="chip ${isOn(g.id,o.k)?'on':''}" onclick="toggleChip('${g.id}','${o.k}',${g.multi})">${o.x}</button>`).join("")}</div>
+        </div>`).join("")}
+    </div>`).join("");
+
+  return `
+  <div class="page-head">
+    <div><div class="page-title">Office Visit Note</div><div class="page-sub">${p.name} · ${p.age} yo ${p.sex==='M'?'M':'F'} · ${p.mrn}</div></div>
+    <div class="tmpl-seg">
+      <button class="${NOTE.tmpl==='gerd'?'active':''}" onclick="setTmpl('gerd')">GERD follow-up</button>
+      <button class="${NOTE.tmpl==='bleed'?'active':''}" onclick="setTmpl('bleed')">Rectal bleeding</button>
+    </div>
+  </div>
+
+  <div class="speed-bar" id="speed-bar"></div>
+
+  <div class="note-layout">
+    <div class="note-build">${builder}</div>
+    <div class="note-preview">
+      <div class="np-head"><div class="pt">Note preview · ${p.name}</div><button class="btn primary" style="height:30px;padding:0 12px" onclick="signNote()">Sign note</button></div>
+      <div class="np-body" id="np-body"></div>
+    </div>
+  </div>`;
+}
+
+function buildNarrative(){
+  const tpl = NOTE_TEMPLATES[NOTE.tmpl];
+  const sel = NOTE.sel;
+  const phrase = ids => ids.map(id=>{
+    const g = findGroup(id); if(!g) return [];
+    const chosen = (sel[id]||[]).map(k=>{const o=g.opts.find(z=>z.k===k);return o?o.x:null}).filter(Boolean);
+    return chosen;
+  }).flat();
+  const cap = s => s? s.charAt(0).toUpperCase()+s.slice(1) : s;
+
+  let out = "";
+  const p = pt(NOTE.pid);
+  out += `<h4>Chief Complaint</h4><p>${tpl.cc}</p>`;
+
+  // HPI
+  const hpiIds = tpl.sections.find(s=>s.t==="HPI").groups.map(g=>g.id);
+  const hpiPhrases = phrase(hpiIds);
+  out += `<h4>History of Present Illness</h4>`;
+  if(hpiPhrases.length){
+    out += `<p>${p.name.split(" ")[0]} is a ${p.age}-year-old ${p.sex==='M'?'man':'woman'} who ${joinClauses(hpiPhrases)}.</p>`;
+  }else{ out += `<p class="ph">Select HPI options to build the narrative…</p>`; }
+
+  // ROS / Exam / A&P
+  ["ROS","Exam","Assessment & Plan"].forEach(secT=>{
+    const sec = tpl.sections.find(s=>s.t===secT); if(!sec) return;
+    const ids = sec.groups.map(g=>g.id);
+    const ph = phrase(ids);
+    const title = secT==="ROS"?"Review of Systems":secT;
+    out += `<h4>${title}</h4>`;
+    if(!ph.length){ out += `<p class="ph">— not yet documented —</p>`; return; }
+    if(secT==="Assessment & Plan"){
+      out += `<p>${p.age} yo ${p.sex==='M'?'M':'F'} — ${tpl.label}.</p>`;
+      out += ph.map((s,i)=>`<p>${i+1}. ${cap(s)}</p>`).join("");
+    }else{
+      out += `<p>${cap(joinClauses(ph))}.</p>`;
+    }
+  });
+  return out;
+}
+function findGroup(id){
+  const tpl = NOTE_TEMPLATES[NOTE.tmpl];
+  for(const s of tpl.sections){ const g=s.groups.find(x=>x.id===id); if(g) return g; }
+  return null;
+}
+function joinClauses(arr){
+  if(arr.length===1) return arr[0];
+  return arr.slice(0,-1).join(", ") + ", and " + arr[arr.length-1];
+}
+function paintNote(){
+  const body = document.getElementById("np-body");
+  if(body) body.innerHTML = buildNarrative();
+  // repaint chips' on-state without full re-render
+  document.querySelectorAll(".note-build .chip").forEach(()=>{});
+  const tpl = NOTE_TEMPLATES[NOTE.tmpl];
+  tpl.sections.forEach(sec=>sec.groups.forEach(g=>g.opts.forEach(o=>{})));
+  refreshChips();
+  refreshSpeed();
+}
+function refreshChips(){
+  document.querySelectorAll(".note-build .chip").forEach(btn=>{
+    const m = btn.getAttribute("onclick").match(/toggleChip\('([^']+)','([^']+)'/);
+    if(!m) return;
+    btn.classList.toggle("on", isOn(m[1],m[2]));
+  });
+}
+function refreshSpeed(){
+  const bar = document.getElementById("speed-bar");
+  if(!bar) return;
+  const picks = Object.values(NOTE.sel).reduce((s,a)=>s+a.length,0);
+  const secs = Math.max(8, NOTE.clicks*4);
+  bar.innerHTML = `
+    <div class="sb-metric"><b>${NOTE.clicks}</b> clicks</div>
+    <div class="sb-metric"><b>${picks}</b> structured findings captured</div>
+    <div class="sb-metric">≈ <b>${secs}s</b> to a signable note</div>
+    <div class="sb-spacer"></div>
+    <div class="vs">gGastro equivalent ≈ 4 min of typing</div>`;
+}
+function mountNote(){ paintNote(); }
+function signNote(){
+  const picks = Object.values(NOTE.sel).reduce((s,a)=>s+a.length,0);
+  if(!picks){ alert("Add a few findings first — click the chips to build the note."); return; }
+  alert("Note signed (demo).\n\n"+document.getElementById("np-body").innerText.slice(0,400)+"…");
+}
+
+/* ============================================================
+   COLONOSCOPY BUILDER + SURVEILLANCE ENGINE  (Part C)
+   ============================================================ */
+const LOCATIONS = ["Cecum","Ascending colon","Hepatic flexure","Transverse colon","Splenic flexure","Descending colon","Sigmoid colon","Rectum"];
+const MORPH = ["Sessile (Is)","Pedunculated (Ip)","Flat (IIa)"];
+const TECH = ["Cold forceps","Cold snare","Hot snare","EMR (piecemeal)"];
+const SIZES = [2,3,4,5,6,7,8,9,10,12,15,20,25,30];
+const HISTOS = ["Tubular adenoma","Tubulovillous adenoma","Villous adenoma","Sessile serrated lesion","Hyperplastic polyp","Adenoma w/ high-grade dysplasia","Adenocarcinoma","Normal / no dysplasia"];
+
+let GENERATED = [];   // recalls created live during the demo (in-memory)
+let PROC = null;
+function newProc(){
+  return {
+    pid:"p1", date:"2026-07-07", prep:"Good", extent:"Cecum", withdrawal:9,
+    polyps:[
+      {id:1, size:8,  loc:"Sigmoid colon",    morph:"Sessile (Is)",     tech:"Cold snare", histo:null},
+      {id:2, size:12, loc:"Descending colon", morph:"Pedunculated (Ip)", tech:"Hot snare",  histo:null}
+    ],
+    seq:3, step:1, pathDone:false, recall:null
+  };
+}
+function procSet(f,v){ if(f==="withdrawal") v=Number(v); PROC[f]=v; render(); }
+function procSetPolyp(id,f,v){ const p=PROC.polyps.find(x=>x.id===id); if(!p)return; p[f]=(f==="size")?Number(v):v; render(); }
+function procAddPolyp(){ PROC.polyps.push({id:PROC.seq++, size:5, loc:"Ascending colon", morph:"Sessile (Is)", tech:"Cold snare", histo:null}); render(); }
+function procRemovePolyp(id){ PROC.polyps=PROC.polyps.filter(x=>x.id!==id); render(); }
+function procStep(s){ PROC.step=s; render(); }
+
+/* ---- Guideline library (2020 USMSTF post-polypectomy) ---- */
+function computeSurveillance(polyps){
+  const adenoHist = ["Tubular adenoma","Tubulovillous adenoma","Villous adenoma","Adenoma w/ high-grade dysplasia"];
+  const adenomas = polyps.filter(p=>adenoHist.includes(p.histo));
+  const ssls = polyps.filter(p=>p.histo==="Sessile serrated lesion");
+  const cancer = polyps.some(p=>p.histo==="Adenocarcinoma");
+  const nAd = adenomas.length;
+  const advanced = adenomas.some(p=> p.size>=10 || p.histo==="Villous adenoma" || p.histo==="Tubulovillous adenoma" || p.histo==="Adenoma w/ high-grade dysplasia");
+  const bigPiecemeal = polyps.some(p=> p.size>=20 && p.tech==="EMR (piecemeal)");
+  const advFeatures = [];
+  adenomas.forEach(p=>{
+    if(p.size>=10) advFeatures.push(`${p.size} mm adenoma`);
+    if(p.histo==="Tubulovillous adenoma"||p.histo==="Villous adenoma") advFeatures.push("villous histology");
+    if(p.histo==="Adenoma w/ high-grade dysplasia") advFeatures.push("high-grade dysplasia");
+  });
+  const G = "USMSTF post-polypectomy surveillance guideline (Gastroenterology 2020)";
+
+  if(cancer) return {years:null,label:"Oncology referral",rationale:"Invasive adenocarcinoma identified. This falls outside routine surveillance — refer for oncologic staging and multidisciplinary management.",cite:G,refer:true};
+  if(bigPiecemeal) return {years:0.5,label:"6 months",rationale:"Lesion ≥20 mm removed piecemeal by EMR. Short-interval follow-up is recommended to confirm complete resection of the scar.",cite:G};
+  if(nAd>10) return {years:1,label:"1 year",rationale:`${nAd} adenomas identified (>10). Consider evaluation for a polyposis syndrome.`,cite:G};
+  if(advanced || nAd>=5) {
+    const rl = advanced ? `advanced adenoma (${[...new Set(advFeatures)].join(", ")})` : `${nAd} adenomas`;
+    return {years:3,label:"3 years",rationale:`Surveillance interval driven by ${rl}. Findings meet high-risk criteria warranting a 3-year return.`,cite:G};
+  }
+  if(nAd>=3) return {years:4,label:"3–5 years",rationale:`${nAd} tubular adenomas < 10 mm without advanced features. A 3–5 year interval is recommended.`,cite:G};
+  if(nAd>=1) return {years:8,label:"7–10 years",rationale:`${nAd} tubular adenoma${nAd>1?'s':''} < 10 mm without advanced features. A 7–10 year interval is appropriate.`,cite:G};
+  if(ssls.some(p=>p.size>=10)) return {years:3,label:"3 years",rationale:"Sessile serrated lesion ≥ 10 mm.",cite:G};
+  if(ssls.length) return {years:7,label:"5–10 years",rationale:"Small sessile serrated lesion(s) without dysplasia.",cite:G};
+  if(polyps.some(p=>p.histo==="Hyperplastic polyp")) return {years:10,label:"10 years",rationale:"Only small hyperplastic polyps in the rectosigmoid — equivalent to a normal exam.",cite:G};
+  return {years:10,label:"10 years",rationale:"No adenomatous tissue identified. Return to average-risk screening interval.",cite:G};
+}
+function addYears(dateStr, years){
+  const d = new Date(dateStr);
+  const whole = Math.floor(years);
+  d.setFullYear(d.getFullYear()+whole);
+  const frac = years-whole; if(frac>0) d.setMonth(d.getMonth()+Math.round(frac*12));
+  return d.toISOString().slice(0,10);
+}
+
+function viewProcedure(){
+  if(!PROC) PROC = newProc();
+  const p = pt(PROC.pid);
+  const steps = ["Document procedure","Pathology result","Surveillance & recall"];
+  const stepper = steps.map((s,i)=>{
+    const n=i+1; const cls = PROC.step===n?"active":(PROC.step>n?"done":"");
+    return `<div class="step ${cls}"><span class="num">${PROC.step>n?'✓':n}</span>${s}</div>`;
+  }).join("");
+
+  const options = DB.patients.map(x=>`<option value="${x.id}" ${x.id===PROC.pid?'selected':''}>${x.name} · ${x.mrn}</option>`).join("");
+  let left="";
+  if(PROC.step===1) left = procDocForm();
+  else if(PROC.step===2) left = procPathForm();
+  else left = procSurvForm();
+
+  return `
+  <div class="page-head">
+    <div><div class="page-title">Colonoscopy — Procedure Builder</div><div class="page-sub">${p.name} · ${p.age} yo ${p.sex==='M'?'M':'F'} · ${PROC.date}</div></div>
+    <select class="pt-select" onchange="PROC.pid=this.value;render()" ${PROC.step>1?'disabled':''}>${options}</select>
+  </div>
+  <div class="stepper">${stepper}</div>
+  <div class="proc-layout">
+    <div>${left}</div>
+    <div>${procPreview()}</div>
+  </div>`;
+}
+
+function seg(field,val,options,styleMap){
+  return `<div class="qseg">`+options.map(o=>{
+    const on = PROC[field]===o;
+    const extra = on&&styleMap&&styleMap[o]?styleMap[o]:"";
+    return `<button class="${on?'on '+extra:''}" onclick="procSet('${field}','${o}')">${o}</button>`;
+  }).join("")+`</div>`;
+}
+function procDocForm(){
+  const polyps = PROC.polyps.map(p=>`
+    <div class="polyp">
+      <div class="polyp-head"><div class="pt">Polyp ${p.id}</div><button class="rm" onclick="procRemovePolyp(${p.id})">Remove</button></div>
+      <div class="form-row" style="margin-bottom:0">
+        <div class="field"><label>Size</label><select onchange="procSetPolyp(${p.id},'size',this.value)">${SIZES.map(s=>`<option ${s===p.size?'selected':''}>${s}</option>`).join("")}</select></div>
+        <div class="field"><label>Location</label><select onchange="procSetPolyp(${p.id},'loc',this.value)">${LOCATIONS.map(l=>`<option ${l===p.loc?'selected':''}>${l}</option>`).join("")}</select></div>
+        <div class="field"><label>Morphology</label><select onchange="procSetPolyp(${p.id},'morph',this.value)">${MORPH.map(m=>`<option ${m===p.morph?'selected':''}>${m}</option>`).join("")}</select></div>
+        <div class="field"><label>Technique</label><select onchange="procSetPolyp(${p.id},'tech',this.value)">${TECH.map(t=>`<option ${t===p.tech?'selected':''}>${t}</option>`).join("")}</select></div>
+      </div>
+    </div>`).join("");
+
+  return `
+  <div class="panel">
+    <div class="panel-head"><div class="panel-title">Structured findings</div><span class="badge blue">auto-narrative</span></div>
+    <div style="padding:16px">
+      <div class="form-row">
+        <div class="field"><label>Bowel prep quality</label>${seg('prep',PROC.prep,["Excellent","Good","Fair","Poor"],{Fair:'warn',Poor:'bad'})}</div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Extent reached</label><select onchange="procSet('extent',this.value)">${["Terminal ileum","Cecum","Splenic flexure (incomplete)","Descending colon (incomplete)"].map(e=>`<option ${e===PROC.extent?'selected':''}>${e}</option>`).join("")}</select></div>
+        <div class="field"><label>Withdrawal time (min)</label><select onchange="procSet('withdrawal',this.value)">${[6,7,8,9,10,11,12,14,16].map(w=>`<option ${w===PROC.withdrawal?'selected':''}>${w}</option>`).join("")}</select></div>
+      </div>
+      <div class="nb-title" style="margin-top:6px">Polyps / interventions (${PROC.polyps.length})</div>
+      ${polyps || '<div class="page-sub" style="margin-bottom:10px">No polyps — normal exam.</div>'}
+      <button class="add-polyp" onclick="procAddPolyp()">+ Add polyp</button>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end">
+        <button class="btn primary" onclick="procStep(2)">Send specimens to pathology →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function procPathForm(){
+  // default plausible histology on first entry
+  if(!PROC.pathDone){
+    PROC.polyps.forEach(p=>{ if(!p.histo){
+      p.histo = p.size>=10 ? "Tubulovillous adenoma" : (p.size<=4 ? "Hyperplastic polyp" : "Tubular adenoma");
+    }});
+    PROC.pathDone=true;
+  }
+  const cards = PROC.polyps.map(p=>`
+    <div class="path-card">
+      <div class="pc-head"><span class="spec">Specimen — Polyp ${p.id}</span><span class="pill gray">${p.size} mm · ${p.loc}</span></div>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3)">Histology (from PathGroup)</label>
+      <select onchange="procSetPolyp(${p.id},'histo',this.value)" style="margin-top:5px">${HISTOS.map(h=>`<option ${h===p.histo?'selected':''}>${h}</option>`).join("")}</select>
+    </div>`).join("");
+
+  return `
+  <div class="magic-banner">
+    <div class="ic">${bell()}</div>
+    <div><div class="mt">Pathology resulted — reconciled to this procedure</div>
+    <div class="ms">PathGroup returned ${PROC.polyps.length} specimen result${PROC.polyps.length>1?'s':''}, auto-matched to ${pt(PROC.pid).name}'s colonoscopy. Adjust any histology to see the interval recompute.</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div class="panel-title">Path lab result</div><span class="badge green">matched</span></div>
+    <div style="padding:16px">
+      ${cards}
+      <div style="margin-top:8px;display:flex;justify-content:space-between">
+        <button class="btn" onclick="procStep(1)">← Back to procedure</button>
+        <button class="btn primary" onclick="procStep(3)">Compute surveillance interval →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function procSurvForm(){
+  const s = computeSurveillance(PROC.polyps);
+  const p = pt(PROC.pid);
+  const dueDate = s.years? addYears(PROC.date, s.years) : null;
+  const est = "$3,100";
+  const heroRight = s.refer ? `<div><div class="lbl"><b>Refer to oncology</b></div><div class="lbl">outside routine surveillance</div></div>`
+    : `<div><div class="lbl">Next colonoscopy in</div><div class="lbl"><b>${s.label}</b> · due ${dueDate}</div></div>`;
+
+  const madeBlock = PROC.recall ? `
+    <div class="recall-made">
+      <div class="ic">✓</div>
+      <div><b>Recall created for ${p.name}.</b> ${s.refer?'Flagged for oncology referral.':`Return colonoscopy scheduled to the recall list for <b>${PROC.recall.due}</b> — est. ${est} in future facility + professional revenue.`} It now appears on the Recall &amp; Surveillance dashboard.</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn" onclick="procReset()">New procedure</button>
+      <button class="btn primary" onclick="go('recalls')">View recall dashboard →</button>
+    </div>`
+  : `
+    <div style="display:flex;justify-content:space-between">
+      <button class="btn" onclick="procStep(2)">← Back to pathology</button>
+      <button class="btn primary" onclick="procGenerateRecall()">${s.refer?'Flag oncology referral':'Generate recall & put on schedule'} →</button>
+    </div>`;
+
+  return `
+  <div class="surv-result">
+    <div class="surv-hero">
+      <div class="big">${s.refer?'—':s.label.split(/[ –]/)[0]}</div>
+      ${heroRight}
+    </div>
+    <div class="surv-detail">
+      ${s.rationale}
+      <div class="cite">Computed automatically from structured findings · ${s.cite}</div>
+    </div>
+  </div>
+  ${madeBlock}`;
+}
+
+function procGenerateRecall(){
+  const s = computeSurveillance(PROC.polyps);
+  const p = pt(PROC.pid);
+  const rec = {
+    pid:PROC.pid,
+    reason: s.refer?"Oncology referral — colon adenocarcinoma":"Post-polypectomy surveillance",
+    interval: s.refer?"—":s.label,
+    due: s.years? addYears(PROC.date,s.years) : "ASAP",
+    cls: s.refer?"red":(s.years<=1?"amber":"blue"),
+    est: "$3,100",
+    generated:true
+  };
+  GENERATED.unshift(rec);
+  PROC.recall = rec;
+  render();
+}
+function procReset(){ PROC = newProc(); render(); }
+
+function procPreview(){
+  const tab = PROC.step<=1 ? "report" : (PROC.step===2 ? "path" : "recall");
+  return `
+  <div class="report">
+    <div class="report-tabs">
+      <button class="${PROC.previewTab!=='discharge'?'active':''}" onclick="PROC.previewTab='report';render()">Procedure report</button>
+      <button class="${PROC.previewTab==='discharge'?'active':''}" onclick="PROC.previewTab='discharge';render()">Patient instructions</button>
+    </div>
+    <div class="report-body">${PROC.previewTab==='discharge'?procDischarge():procNarrative()}</div>
+  </div>`;
+}
+function procNarrative(){
+  const p = pt(PROC.pid);
+  const found = PROC.polyps.length;
+  const polypSentences = PROC.polyps.map(p2=>{
+    const tech = p2.tech==="EMR (piecemeal)"?"removed by piecemeal endoscopic mucosal resection":
+                 p2.tech==="Hot snare"?"removed by hot snare polypectomy":
+                 p2.tech==="Cold snare"?"removed by cold snare polypectomy":"removed by cold biopsy forceps";
+    return `A ${p2.size} mm ${p2.morph.split(" ")[0].toLowerCase()} polyp was identified in the ${p2.loc.toLowerCase()} and ${tech}. Specimen retrieved and sent for histology.`;
+  }).join(" ");
+  const histoLine = PROC.pathDone ? `<h4>Pathology</h4><p>${PROC.polyps.map(p2=>`Polyp ${p2.id} (${p2.loc}): ${p2.histo||'pending'}.`).join(" ")}</p>` : "";
+  return `
+    <h4>Procedure</h4><p>Colonoscopy with the endoscope advanced to the ${PROC.extent.toLowerCase()}.</p>
+    <h4>Bowel preparation</h4><p>${PROC.prep} preparation (${PROC.prep==='Excellent'||PROC.prep==='Good'?'adequate':'consider shortened interval'}).</p>
+    <h4>Withdrawal time</h4><p>${PROC.withdrawal} minutes.</p>
+    <h4>Findings</h4><p>${found? polypSentences : "Normal colonoscopy to the "+PROC.extent.toLowerCase()+". No polyps, masses, or inflammation."}</p>
+    ${histoLine}
+    <h4>Impression</h4><p>${found?`${found} polyp${found>1?'s':''} identified and removed as above.`:"Normal colonoscopy."} ${PROC.step>=3?`Surveillance interval: ${computeSurveillance(PROC.polyps).label}.`:""}</p>`;
+}
+function procDischarge(){
+  const p = pt(PROC.pid);
+  const removed = PROC.polyps.length>0;
+  return `
+    <h4>After your colonoscopy</h4>
+    <p>${p.name.split(" ")[0]}, your colonoscopy on ${PROC.date} is complete. The scope was advanced to the ${PROC.extent.toLowerCase()} and your prep was rated <b>${PROC.prep.toLowerCase()}</b>.</p>
+    <h4>What we found</h4>
+    <p>${removed? `We found and removed ${PROC.polyps.length} polyp${PROC.polyps.length>1?'s':''}. These were sent to the lab; we will contact you with results.` : "Your colon looked normal. No polyps were found."}</p>
+    <h4>What to expect today</h4>
+    <p>You may feel bloated from air used during the exam — this passes within a few hours. Do not drive or make important decisions today because of the sedation. Resume your normal diet unless told otherwise.</p>
+    <h4>Call us if you have</h4>
+    <p>Severe abdominal pain, a firm swollen belly, fever, or more than a small amount of rectal bleeding.</p>
+    ${PROC.step>=3 && !computeSurveillance(PROC.polyps).refer? `<h4>Your next colonoscopy</h4><p>Based on today's findings, your next colonoscopy is recommended in <b>${computeSurveillance(PROC.polyps).label}</b>. Our office will reach out to schedule it.</p>`:""}`;
+}
+
+/* ============================================================
+   RECALL POPULATION DASHBOARD  (Part D)
+   ============================================================ */
+let RECALL_FILTER = "all";
+function allRecalls(){
+  // seeded + any generated live
+  const seeded = DB.recallsDue.map(r=>({...r, due2: r.cls==='red'?'overdue':(r.due.includes('9 days')?'soon':'soon')}));
+  const gen = GENERATED.map(r=>({...r, due:`Due ${r.due}`, due2:'future'}));
+  return [...gen, ...seeded];
+}
+function viewRecalls(){
+  const rows = allRecalls();
+  const filtered = rows.filter(r=>{
+    if(RECALL_FILTER==="overdue") return r.cls==='red';
+    if(RECALL_FILTER==="soon") return r.cls==='amber'||r.cls==='blue';
+    if(RECALL_FILTER==="generated") return r.generated;
+    return true;
+  });
+  const money = a => Number(String(a.est).replace(/[^0-9]/g,""))||0;
+  const totalRisk = rows.reduce((s,r)=>s+money(r),0);
+  const overdueN = rows.filter(r=>r.cls==='red').length;
+  const soonN = rows.filter(r=>r.cls==='amber').length;
+
+  const body = filtered.map(r=>{
+    const p = pt(r.pid);
+    return `<tr>
+      <td class="who">${p.name}<div style="font-size:11px;color:var(--text-3);font-weight:500">${p.mrn} · ${p.age} yo</div></td>
+      <td>${r.reason}</td>
+      <td>${r.interval}</td>
+      <td><span class="pill ${r.cls}">${r.due}</span>${r.generated?' <span class="pill green">new</span>':''}</td>
+      <td class="money">${r.est}</td>
+      <td><button class="mini-btn" onclick="alert('Outreach queued (demo): SMS + letter to '+${JSON.stringify(p.name)})">Schedule</button></td>
+    </tr>`;
+  }).join("");
+
+  return `
+  <div class="page-head">
+    <div><div class="page-title">Recall &amp; Surveillance</div><div class="page-sub">Every polyp found becomes a scheduled future visit — this is the practice's forward revenue</div></div>
+    <div class="filter-seg">
+      <button class="${RECALL_FILTER==='all'?'active':''}" onclick="RECALL_FILTER='all';render()">All</button>
+      <button class="${RECALL_FILTER==='overdue'?'active':''}" onclick="RECALL_FILTER='overdue';render()">Overdue</button>
+      <button class="${RECALL_FILTER==='soon'?'active':''}" onclick="RECALL_FILTER='soon';render()">Due soon</button>
+      <button class="${RECALL_FILTER==='generated'?'active':''}" onclick="RECALL_FILTER='generated';render()">New${GENERATED.length?` (${GENERATED.length})`:''}</button>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="label">Patients on recall</div><div class="val brand">${rows.length}</div><div class="meta">${GENERATED.length} added this session</div></div>
+    <div class="kpi"><div class="label">Overdue</div><div class="val danger">${overdueN}</div><div class="meta">Actively leaking revenue</div></div>
+    <div class="kpi"><div class="label">Due this month</div><div class="val warn">${soonN}</div><div class="meta">Outreach ready to send</div></div>
+    <div class="kpi"><div class="label">Revenue at risk</div><div class="val danger">$${totalRisk.toLocaleString()}</div><div class="meta">If these don't get scheduled</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div class="panel-title">Recall worklist</div><button class="panel-link" onclick="alert('Bulk outreach queued for '+${filtered.length}+' patients (demo).')">Send outreach to all →</button></div>
+    <table class="tbl">
+      <thead><tr><th>Patient</th><th>Reason</th><th>Interval</th><th>Status</th><th>Est. value</th><th></th></tr></thead>
+      <tbody>${body || '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-3)">No recalls in this filter</td></tr>'}</tbody>
+    </table>
+  </div>`;
+}
+
+/* ============================================================
+   FINANCIAL & OPS GLIMPSE  (Part D) — faux data
+   ============================================================ */
+function viewFinancials(){
+  const months = [{m:"Feb",v:182},{m:"Mar",v:205},{m:"Apr",v:198},{m:"May",v:231},{m:"Jun",v:244},{m:"Jul",v:126}];
+  const maxV = 260;
+  const bars = months.map((x,i)=>{
+    const h = Math.round(x.v/maxV*150);
+    return `<div class="bar-col"><div class="bar-val">${x.v}</div><div class="bar ${i===months.length-1?'alt':''}" style="height:${h}px"></div><div class="bar-lbl">${x.m}</div></div>`;
+  }).join("");
+
+  const payers = [{n:"Medicare",v:38,c:"var(--brand)"},{n:"BCBS",v:22,c:"#2563eb"},{n:"UnitedHC",v:16,c:"#7c3aed"},{n:"Aetna",v:12,c:"#0d9268"},{n:"Other",v:12,c:"#94a3b8"}];
+  let acc=0; const grad = payers.map(p=>{const seg=`${p.c} ${acc}% ${acc+p.v}%`;acc+=p.v;return seg;}).join(",");
+  const legend = payers.map(p=>`<div><i style="background:${p.c}"></i>${p.n} · ${p.v}%</div>`).join("");
+
+  const ar = [{l:"0–30 days",v:142,c:"var(--ok)"},{l:"31–60",v:78,c:"#2563eb"},{l:"61–90",v:41,c:"var(--warn)"},{l:"91+",v:29,c:"var(--danger)"}];
+  const arMax=142;
+  const arRows = ar.map(a=>`<div class="hbar-row"><div class="hl">${a.l}</div><div class="hbar-track"><div class="hbar-fill" style="width:${a.v/arMax*100}%;background:${a.c}"></div></div><div class="hv">$${a.v}k</div></div>`).join("");
+
+  return `
+  <div class="page-head">
+    <div><div class="page-title">Financial &amp; Operational</div><div class="page-sub">Demo data · the owner's view of the practice</div></div>
+    <div class="topbar-pill"><span class="dot"></span> Faux metrics</div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="label">Procedures / mo</div><div class="val brand">244</div><div class="meta">+6% vs prior month</div></div>
+    <div class="kpi"><div class="label">No-show rate</div><div class="val warn">7.4%</div><div class="meta">Prep-related leakage</div></div>
+    <div class="kpi"><div class="label">Days in A/R</div><div class="val">34</div><div class="meta">Target &lt; 35</div></div>
+    <div class="kpi"><div class="label">Recall revenue booked</div><div class="val brand">$412k</div><div class="meta">Trailing 12 mo</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Procedure volume</div><span class="badge blue">6 mo</span></div>
+      <div class="bars">${bars}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Payer mix</div></div>
+      <div class="donut-wrap">
+        <div style="width:130px;height:130px;border-radius:50%;background:conic-gradient(${grad})"></div>
+        <div class="legend-list">${legend}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">A/R aging</div><span class="badge amber">$290k total</span></div>
+      <div class="hbars">${arRows}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">No-show & prep quality</div></div>
+      <div class="hbars">
+        <div class="hbar-row"><div class="hl">Adequate prep</div><div class="hbar-track"><div class="hbar-fill" style="width:86%;background:var(--ok)"></div></div><div class="hv">86%</div></div>
+        <div class="hbar-row"><div class="hl">Inadequate</div><div class="hbar-track"><div class="hbar-fill" style="width:14%;background:var(--warn)"></div></div><div class="hv">14%</div></div>
+        <div class="hbar-row"><div class="hl">No-shows</div><div class="hbar-track"><div class="hbar-fill" style="width:7.4%;background:var(--danger)"></div></div><div class="hv">7.4%</div></div>
+        <div style="font-size:12px;color:var(--text-3);padding:8px 2px 0">Each inadequate prep or no-show is a lost ASC slot — the Phase 4 portal + reminders target this directly.</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   VISION & ROADMAP  (Part D leave-behind)
+   ============================================================ */
+function viewVision(){
+  const arch = [
+    {h:"Clinical core", items:["Patient chart / MPI","Documentation engine","Orders & results","Provider inbox","e-Prescribing (EPCS)","Clinical decision support"]},
+    {h:"GI moat", items:["Endoscopy documentation","Pathology reconciliation","Surveillance / recall engine","GIQuIC / MIPS registry","ASC / endoscopy module"]},
+    {h:"Practice mgmt", items:["Scheduling (office + suite)","Eligibility (270/271)","Charge capture & coding","Claims / ERA (837/835)","Denials & A/R","Prior auth · Referrals"]},
+    {h:"Infrastructure", items:["Identity / RBAC · Audit","Document mgmt · Fax","HL7v2 · FHIR · C-CDA","ONC certification (CEHRT)","Migration tooling"]}
+  ];
+  const archCols = arch.map(a=>`<div class="arch-col"><h5>${a.h}</h5><ul>${a.items.map(i=>`<li>${i}</li>`).join("")}</ul></div>`).join("");
+
+  const phases = [
+    {n:"Phase 1", tag:"now", tagl:"You are here", d:"Clickable MVP / design-partner prototype. Front-end illusion, localStorage only. Wins the 3 design partners. (Parts A–D: dashboard, schedule, chart, note, colonoscopy builder, surveillance magic moment, recall + financial dashboards.)"},
+    {n:"Phase 2", tag:"next", tagl:"Next", d:"Foundational platform + first real vertical slice. Multi-tenant data model, auth/RBAC, audit, HIPAA baseline. Productionize the clinical spine and structured endoscopy capture. One end-to-end workflow in shadow with 1–2 partners."},
+    {n:"Phase 3", tag:"later", tagl:"", d:"Revenue cycle + clinical interfaces. Eligibility, charge capture, claims/ERA, denials/AR, prior auth, referrals, fee schedules. eRx/EPCS + inbound labs. Financial dashboards. Begin ONC certification track."},
+    {n:"Phase 4", tag:"later", tagl:"", d:"GI differentiators at scale + patient engagement. Surveillance/recall + pathology reconciliation with real path-lab interfaces. Patient portal, intake, bowel-prep reminders. SMS/email nudges. GIQuIC/MIPS, CDS, ASC module."},
+    {n:"Phase 5", tag:"later", tagl:"", d:"Scale, interoperability, migration, enterprise. gGastro/eCW/Athena migration as GTM weapon. FHIR/C-CDA/TEFCA depth, ONC completion, Cures Act. Multi-location & PE rollups. SOC 2 / HITRUST. Optional AI layer."}
+  ];
+  const phaseRows = phases.map(p=>`<div class="phase"><div class="pn">${p.n}${p.tagl?`<br><span class="tag ${p.tag}">${p.tagl}</span>`:''}</div><div class="pd">${p.d}</div></div>`).join("");
+
+  return `
+  <div class="page-head">
+    <div><div class="page-title">Vision &amp; Roadmap</div><div class="page-sub">The one-pager to leave with a design partner</div></div>
+    <button class="btn print-btn" onclick="window.print()">Print / PDF</button>
+  </div>
+
+  <div class="vision-sheet">
+    <h2>A modern GI EHR + PM, built around the profit engine</h2>
+    <p class="lede">In private-practice GI the EHR is a cost center and the endoscopy suite is the profit center. Our wedge is the loop that turns care into forward revenue: <b>pathology → surveillance → recall</b>. A polyp found today dictates a return visit in 3, 5, or 10 years — the system computes that interval, notifies the patient, and puts them back on the schedule automatically.</p>
+    <div class="arch">${archCols}</div>
+    <div class="moat"><b>The wedge:</b> out-document the incumbent on speed, own the surveillance-recall loop, and make migration painless. Not out-featuring gGastro on day one — beating it where the money is.</div>
+  </div>
+
+  <div class="vision-sheet roadmap">
+    <h2>The 5-phase build</h2>
+    <p class="lede">Ship the vision first, harden the spine second, monetize the switch third, scale the moat fourth, and win the market on migration fifth.</p>
+    ${phaseRows}
+  </div>`;
+}
+
+/* ---------- PLACEHOLDER PAGES (Parts B/C/D) ---------- */
+function viewSoon(id){
+  const map = {
+    chart:{tag:"Part B", title:"Patient Chart Summary", items:["Demographics, insurance, PCP","Problem list, medication list, allergies","Recent encounters & procedures","Read-mostly from seeded data"]},
+    note:{tag:"Part B", title:"GI Office Visit Note", items:["GI-specific template (rectal bleeding / GERD)","Smart phrases & one-click structured capture","The clicks-per-note speed pitch vs. gGastro","Auto-assembled narrative"]},
+    procedure:{tag:"Part C", title:"Structured Colonoscopy Builder", items:["Prep quality, extent, withdrawal time","Polyps: size / location / technique","Auto-generated formal narrative","Auto-generated patient discharge instructions"]},
+    recalls:{tag:"Part C / D", title:"Recall & Surveillance Engine", items:["Path result → reconcile → auto-compute interval (the magic moment)","Guideline library: post-polypectomy, Barrett's","Population view: who's due, who's overdue","Revenue-at-risk for the owner pitch"]},
+    financials:{tag:"Part D", title:"Financial & Operational Glimpse", items:["Procedure volume & payer mix","No-show rate","AR aging (faux)","Closes the owner pitch"]}
+  };
+  const d = map[id] || {tag:"Soon", title:"Coming soon", items:[]};
+  return `<div class="page-head"><div><div class="page-title">${d.title}</div><div class="page-sub">Scoped for a later part of Phase 1</div></div></div>
+  <div class="soon-page">
+    <div class="tag">${d.tag}</div>
+    <h3>${d.title}</h3>
+    <div>This screen is wired into the nav and reads the same seeded data.<br>It gets built in <b>${d.tag}</b>.</div>
+    <ul>${d.items.map(i=>`<li>${i}</li>`).join("")}</ul>
+  </div>`;
+}
+
+/* ============================================================
+   PASSWORD GATE
+   The password is never stored in plaintext — only its SHA-256
+   digest is embedded below, so it can't be read off the source.
+   (Note: this is a light client-side gate for a demo, not real
+   server security — the page content still ships to the browser.)
+   ============================================================ */
+const PW_HASH = "14749dad27bf77bafce3f6faf556cbf0f559d38751d4490c45b052290ada1dfe";
+
+/* Self-contained SHA-256 (ASCII) — no crypto.subtle dependency,
+   so it works over file:// and plain http as well as https. */
+function sha256(ascii){
+  function rr(v,a){return (v>>>a)|(v<<(32-a));}
+  var mp=Math.pow, mw=mp(2,32), res="", words=[], i,j;
+  var bitLen=ascii.length*8;
+  var hash=sha256.h=sha256.h||[], k=sha256.k=sha256.k||[];
+  var pc=k.length, comp={};
+  for(var cand=2;pc<64;cand++){
+    if(!comp[cand]){
+      for(i=0;i<313;i+=cand){comp[i]=cand;}
+      hash[pc]=(mp(cand,.5)*mw)|0;
+      k[pc++]=(mp(cand,1/3)*mw)|0;
+    }
+  }
+  ascii+="\x80";
+  while(ascii.length%64-56)ascii+="\x00";
+  for(i=0;i<ascii.length;i++){
+    j=ascii.charCodeAt(i);
+    if(j>>8)return;
+    words[i>>2]|=j<<((3-i)%4)*8;
+  }
+  words[words.length]=((bitLen/mw)|0);
+  words[words.length]=(bitLen);
+  for(j=0;j<words.length;){
+    var w=words.slice(j,j+=16), oldHash=hash;
+    hash=hash.slice(0,8);
+    for(i=0;i<64;i++){
+      var w15=w[i-15], w2=w[i-2];
+      var a=hash[0], e=hash[4];
+      var t1=hash[7]+(rr(e,6)^rr(e,11)^rr(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]
+        +(w[i]=(i<16)?w[i]:(w[i-16]+(rr(w15,7)^rr(w15,18)^(w15>>>3))+w[i-7]
+        +(rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+      var t2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash=[(t1+t2)|0].concat(hash);
+      hash[4]=(hash[4]+t1)|0;
+    }
+    for(i=0;i<8;i++){hash[i]=(hash[i]+oldHash[i])|0;}
+  }
+  for(i=0;i<8;i++){
+    for(j=3;j+1;j--){
+      var b=(hash[i]>>(j*8))&255;
+      res+=((b<16)?0:"")+b.toString(16);
+    }
+  }
+  return res;
+}
+function tryUnlock(e){
+  if(e) e.preventDefault();
+  const inp=document.getElementById("lock-input");
+  const err=document.getElementById("lock-err");
+  if(sha256(inp.value)===PW_HASH){
+    document.body.classList.remove("locked");
+  }else{
+    err.classList.add("show");
+    inp.value=""; inp.focus();
+  }
+  return false;
+}
+
+/* ---------- BOOT ---------- */
+renderNav();
+applyTheme(localStorage.getItem(THEME_KEY) || "teal");
+render();
+setTimeout(()=>{ const i=document.getElementById("lock-input"); if(i) i.focus(); }, 60);
+</script>
+</body>
+</html>
